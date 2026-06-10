@@ -11,6 +11,17 @@ const app = express();
 
 import connectDB from "./db/index.js";
 
+connectDB()
+.then(() => {
+    app.listen(process.env.PORT || 8000 , () => {
+        console.log(`App is running on the port ${process.env.PORT}`);
+    })
+})
+.catch((error) => {
+    console.log("Database Connection Failed: ", error);
+});
+
+
 /*
 async function connectDB(){
     try{
@@ -32,4 +43,4 @@ async function connectDB(){
 }
 */
 
-connectDB();
+// connectDB();
