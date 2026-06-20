@@ -1,18 +1,18 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError";
+import { ApiError } from "../utils/ApiError.js";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.models.js";
 
 export const verifyJWT = asyncHandler(async(req , res , next) => {
     
-    const token = req.cookie?.accessToken || req.header("Authorization")?.replace("Bearer" , "")
+    const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer" , "").trim();
 
     if(!token){
         throw new ApiError(401 , "Unauuthorised Request");
     }
 
 
-    const decodedToken = jwt.verify(token , process.env.ACCESS_TOKEN_SECRET);
+    const decodedToken = jwt.verify(token , process.env.ACCESS_TOKEN_SECRET);         // give an object containing the payload originally signed
 
     const user = await User.findById(decodedToken?._id).select(
         "-password -refreshToken"
@@ -25,6 +25,5 @@ export const verifyJWT = asyncHandler(async(req , res , next) => {
 
 
     req.user = user;
-    next();
 
 });

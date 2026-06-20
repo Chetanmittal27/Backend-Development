@@ -46,19 +46,13 @@ const registerUser = asyncHandler( async (req , res) => {
     }
 
 
-
     // Upload Files on Cloudinary
     console.log(req.files);
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    const avatarLocalPath = Array.isArray(req.files?.avatar) && req.files.avatar.length > 0 ? req.files.avatar[0].path : undefined;
+    const coverImageLocalPath = Array.isArray(req.files?.coverImage) && req.files.coverImage.length > 0 ? req.files.coverImage[0].path : undefined;
 
-    let coverImageLocalPath;
-
-    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
-        coverImageLocalPath = req.files.coverImage[0].path;
-    }
     if(!avatarLocalPath){
-        throw new ApiError(404 , "Avatar is required");
+        throw new ApiError(400 , "Avatar is required");
     }
 
 
@@ -68,7 +62,6 @@ const registerUser = asyncHandler( async (req , res) => {
     if(!avatar){
         throw new ApiError(400 , "Avatar file is required");
     }
-
 
 
     // Create entry of user in DB
@@ -210,4 +203,42 @@ const logoutUser = asyncHandler(async(req , res) => {
 });
 
 
-export {registerUser , loginUser , logoutUser};
+const refreshAccessToken = asyncHandler((req , res) => {
+
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+
+    if(!incomingRefreshToken){
+        throw new ApiError(401 , "Unauthorised Request");
+    }
+
+    const decodedToken = await jwt.verify(incomingRefreshToken , process.env.REFRESH_TOKEN_SECRET);
+
+    const user = await User.findById(decodedToken?._id);
+
+    if(!user){
+        throw new ApiError(401 , "Invalid Refresh Token");
+    }
+
+    if(incomingRefreshToken !== user?.refreshToken){
+        throw new ApiError(401 , "Refresh token is not latest or expired");
+    }
+
+
+    const newAccessToken = await user.generateAccessToken();
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    };
+
+    return res.status(201)
+    .cookie("accessToken" , newAccessToken , options)
+    .cookie("refreshToken" , refreshToken , options)
+    .json(
+        new ApiResponse(201 , {newAccessToken , refreshToken} , "Access Token Refreshed")
+    );
+
+    
+});
+
+export {registerUser , loginUser , logoutUser , refreshAccessToken};
