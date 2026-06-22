@@ -321,6 +321,17 @@ const updateUserAvatar = asyncHandler(async (req , res) => {
         throw new ApiError(400 , "Avatar is required");
     };
 
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    // Delete old avatar from Cloudinary if exists
+    if (user.avatar?.public_id) {
+        await cloudinary.uploader.destroy(user.avatar.public_id);
+    }
+
+    
     const newAvatar = await uploadOnCloudinary(newAvatarLocalPath);
 
     if(!newAvatar.url){
@@ -348,7 +359,7 @@ const updateUserAvatar = asyncHandler(async (req , res) => {
         new ApiResponse(200 , user , "Avatar Updated Successfully")
     );
 
-    
+
 });
 
 
